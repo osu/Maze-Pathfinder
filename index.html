@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Maze Solver</title>
+  <style>
+    body {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh; /* This makes the body take the full viewport height */
+      margin: 0; /* Removes default margin */
+      background-color: #ffffff;
+    }
+    .content {
+      text-align: center; /* Centers the text elements */
+      /* Prevents content from expanding beyond the viewport height */
+      overflow: auto;
+      max-height: 100vh;
+      padding: 20px; /* Adds some spacing around the content */
+    }
+    #maze {
+      display: grid;
+      grid-template-columns: repeat(51, 10px);
+      grid-template-rows: repeat(51, 10px);
+      gap: 1px;
+      margin: 0 auto; /* Centers the maze grid horizontally */
+      width: 560px; /* Fixed width */
+      height: 560px; /* Fixed height */
+    }
+    .wall {
+      background-color: rgb(14, 14, 14);
+    }
+    .path {
+      background-color: hwb(0 100% 0%);
+    }
+    .non-path {
+      background-color: #ffffff; /* Light gray, or any color you prefer */
+    }
+
+    .in-solution {
+      background-color: rgb(255, 165, 0); /* Orange, or any color to indicate solving */
+    }
+  </style>
+</head>
+<body>
+  <div class="content"> <!-- Wrapper div for centering -->
+    <h1>Maze Solver</h1>
+    <button id="generateBtn">Generate Maze</button>
+    <button id="solveBtn">Solve Maze</button>
+    <div id="maze"></div>
+  </div>
+
+  <script>
+    const generateBtn = document.getElementById('generateBtn');
+    const solveBtn = document.getElementById('solveBtn');
+    const mazeContainer = document.getElementById('maze');
+
+    let cacheBuster = Date.now();
+
+    generateBtn.addEventListener('click', async () => {
+      cacheBuster = Date.now();
+      const response = await fetch(`/generate?cacheBuster=${cacheBuster}`);
+      const maze = await response.text();
+      displayMaze(maze);
+    });
+
+    solveBtn.addEventListener('click', async () => {
+      const response = await fetch(`/solve?cacheBuster=${cacheBuster}`);
+      const solvedMaze = await response.text();
+      displayMaze(solvedMaze);
+    });
+
+    function displayMaze(maze) {
+      mazeContainer.innerHTML = '';
+      const rows = maze.trim().split('\n');
+      rows.forEach(row => {
+        row.split('').forEach(cell => {
+          const div = document.createElement('div');
+          if (cell === '1') {
+            div.classList.add('wall');
+          } else if (cell === '0') { // Assuming '0' is a non-path cell
+            div.classList.add('non-path');
+          } else { // 'S', 'E', 'P'
+            div.classList.add('path');
+          }
+          mazeContainer.appendChild(div);
+        });
+      });
+    }
+
+    // New function to animate the solution
+    function animateSolution(solvedMaze) {
+      const cells = [...mazeContainer.childNodes]; // Convert to array for easier indexing
+      let pathIndexes = []; // To store indexes of path cells
+
+      // Identify path cells ('P', 'S', 'E') and store their indexes
+      solvedMaze.trim().split('\n').forEach((row, rowIndex) => {
+        row.split('').forEach((cell, colIndex) => {
+          const index = rowIndex * 51 + colIndex; // Calculate index based on row and column
+          if (cell === 'P' || cell === 'S' || cell === 'E') {
+            pathIndexes.push(index); // Add index of the path cell to the array
+          }
+        });
+      });
+
+      // Animate the solution by adding 'in-solution' class to each path cell sequentially
+      let currentIndex = 0;
+      const intervalId = setInterval(() => {
+        if (currentIndex >= pathIndexes.length) {
+          clearInterval(intervalId); // Stop the animation when all path cells are processed
+          return;
+        }
+        const cell = cells[pathIndexes[currentIndex]]; // Get the current cell to animate
+        cell.classList.add('in-solution'); // Add the 'in-solution' class to highlight the cell
+        currentIndex++; // Move to the next cell in the path
+      }, 50); // Adjust the animation speed as needed
+    }
+
+
+    // Modify the solve button's event listener to use animateSolution
+    solveBtn.addEventListener('click', async () => {
+      const response = await fetch(`/solve?cacheBuster=${cacheBuster}`);
+      const solvedMaze = await response.text();
+      displayMaze(solvedMaze); // Display the maze normally first
+      animateSolution(solvedMaze); // Then animate the solution
+    });
+
+  </script>
+</body>
+</html>
