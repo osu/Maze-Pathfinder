@@ -22,12 +22,8 @@
     }
     #maze {
       display: grid;
-      grid-template-columns: repeat(51, 10px);
-      grid-template-rows: repeat(51, 10px);
       gap: 1px;
-      margin: 0 auto; /* Centers the maze grid horizontally */
-      width: 560px; /* Fixed width */
-      height: 560px; /* Fixed height */
+      margin: 0 auto;
     }
     .wall {
       background-color: rgb(14, 14, 14);
@@ -45,8 +41,12 @@
   </style>
 </head>
 <body>
-  <div class="content"> <!-- Wrapper div for centering -->
+  <div class="content">
     <h1>Maze Solver</h1>
+    <label for="sizeSlider">Maze Size:</label>
+    <input type="range" id="sizeSlider" min="10" max="99" step="1" value="99">
+    <span id="sizeValue">99</span>
+    <br><br>
     <button id="generateBtn">Generate Maze</button>
     <button id="solveBtn">Solve Maze</button>
     <div id="maze"></div>
@@ -59,9 +59,28 @@
 
     let cacheBuster = Date.now();
 
+    const sizeSlider = document.getElementById('sizeSlider');
+    const sizeValue = document.getElementById('sizeValue');
+
+    let mazeSize = sizeSlider.value;
+
+    sizeSlider.addEventListener('input', () => {
+      mazeSize = sizeSlider.value;
+      sizeValue.textContent = mazeSize;
+      updateMazeSize();
+    });
+
+    function updateMazeSize() {
+      const cellSize = Math.floor(560 / mazeSize);
+      mazeContainer.style.gridTemplateColumns = `repeat(${mazeSize}, ${cellSize}px)`;
+      mazeContainer.style.gridTemplateRows = `repeat(${mazeSize}, ${cellSize}px)`;
+      mazeContainer.style.width = `${cellSize * mazeSize}px`;
+      mazeContainer.style.height = `${cellSize * mazeSize}px`;
+    }
+
     generateBtn.addEventListener('click', async () => {
       cacheBuster = Date.now();
-      const response = await fetch(`/generate?cacheBuster=${cacheBuster}`);
+      const response = await fetch(`/generate?size=${mazeSize}&cacheBuster=${cacheBuster}`);
       const maze = await response.text();
       displayMaze(maze);
     });
@@ -80,9 +99,9 @@
           const div = document.createElement('div');
           if (cell === '1') {
             div.classList.add('wall');
-          } else if (cell === '0') { // Assuming '0' is a non-path cell
+          } else if (cell === '0') {
             div.classList.add('non-path');
-          } else { // 'S', 'E', 'P'
+          } else {
             div.classList.add('path');
           }
           mazeContainer.appendChild(div);
@@ -92,15 +111,14 @@
 
     // New function to animate the solution
     function animateSolution(solvedMaze) {
-      const cells = [...mazeContainer.childNodes]; // Convert to array for easier indexing
-      let pathIndexes = []; // To store indexes of path cells
+      const cells = [...mazeContainer.childNodes];
+      let pathIndexes = [];
 
-      // Identify path cells ('P', 'S', 'E') and store their indexes
       solvedMaze.trim().split('\n').forEach((row, rowIndex) => {
         row.split('').forEach((cell, colIndex) => {
-          const index = rowIndex * 51 + colIndex; // Calculate index based on row and column
+          const index = rowIndex * mazeSize + colIndex;
           if (cell === 'P' || cell === 'S' || cell === 'E') {
-            pathIndexes.push(index); // Add index of the path cell to the array
+            pathIndexes.push(index);
           }
         });
       });
@@ -126,7 +144,7 @@
       displayMaze(solvedMaze); // Display the maze normally first
       animateSolution(solvedMaze); // Then animate the solution
     });
-
+    updateMazeSize();
   </script>
 </body>
 </html>
